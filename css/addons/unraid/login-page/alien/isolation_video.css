@@ -1,7 +1,7 @@
 @import url(./alien-base.css);
 :root {
     --main-bg: transparent;
-    --logo: url(./logo/wings_green.png) center no-repeat;
+    --logo: url(https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master/css/images/unjoe_logo.png) center no-repeat;
     --text-color: #37f592;
     --input-color: #37f592;
     --link-color: #37f592;

@@ -10,7 +10,7 @@
 --body-before: none;
 --body-after: none;
 --body-animation: flicker;
-  --logo: url(../alien/logo/wings_red.png) center no-repeat;
+  --logo: url(https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master/css/images/unjoe_logo.png) center no-repeat;
 --text-color: #e22828;
 --input-color: #e22828;
 --link-color: #e22828;

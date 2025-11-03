@@ -10,7 +10,7 @@
 --body-before:none;
 --body-after: none;
 --body-animation: flicker;
-  --logo: url(../alien/logo/wings_blue.png) center no-repeat;
+  --logo: url(https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master/css/images/unjoe_logo.png) center no-repeat;
 --text-color: #70d7f6;
 --input-color: #70d7f6;
 --link-color: #70d7f6;
@@ -23,7 +23,7 @@
 --selection-color: #8f2809;
 --custom-text-header:#70d7f6;
 --custom-text-header-shadow:#70d7f6;
---custom-text-header-animation: none;
+--custom-text-header-animation: textflicker;
 --input-font: 'Share Tech Mono', monospace;
 --text-font: 'Share Tech Mono', monospace;
 --loginbox-background-color: transparent;

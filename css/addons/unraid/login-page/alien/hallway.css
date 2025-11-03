@@ -2,7 +2,7 @@
 :root {
     --main-bg: radial-gradient(ellipse at center,rgba(0, 255, 119, 0.1) 0,rgba(0,255,119,0) 100%) center center/cover no-repeat fixed, 
     url(./wallpaper/hallway.jpg) center center/cover no-repeat fixed;
-    --logo: url(./logo/wings_green.png) center no-repeat;
+    --logo: url(https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master/css/images/unjoe_logo.png) center no-repeat;
     --text-color: #37f592;
     --input-color: #37f592;
     --link-color: #37f592;

@@ -9,6 +9,9 @@ ADD_JS="true"
 JS="custom_text_header.js"
 DISABLE_THEME="false"
 
+# Cache-busting version (override by exporting VERSION before running)
+VERSION="${VERSION:-$(date +%s)}"
+
 ## FAQ
 
   # If you update the source after the script has been run,
@@ -22,7 +25,8 @@ THEME         = ${THEME}\n\
 BASE_URL      = ${BASE_URL}\n\
 ADD_JS        = ${ADD_JS}\n\
 JS            = ${JS}\n\
-DISABLE_THEME = ${DISABLE_THEME}\n"
+DISABLE_THEME = ${DISABLE_THEME}\n\
+VERSION       = ${VERSION}\n"
 
 echo "NOTE: Change the LOGIN_PAGE variable to /usr/local/emhttp/login.php if you are on a version older than 6.10"
 LOGIN_PAGE="/usr/local/emhttp/webGui/include/.login.php"
@@ -49,23 +53,23 @@ fi
 # Add stylesheets if not present (anchor before </head>)
 if ! grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
   echo "Adding stylesheet"
-  sed -i -e "\@</head>@i\    <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css'>" ${LOGIN_PAGE}
-  sed -i -e "\@</head>@i\    <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}'>" ${LOGIN_PAGE}
+  sed -i -e "\@</head>@i\    <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css?v=${VERSION}'>" ${LOGIN_PAGE}
+  sed -i -e "\@</head>@i\    <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${VERSION}'>" ${LOGIN_PAGE}
   echo 'Stylesheet set to' ${THEME}
 fi
 
-# Ensure stylesheet hrefs point to the correct source
-sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}'>" ${LOGIN_PAGE}
-sed -i "/<link data-tp='base' rel='stylesheet' href='/c <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css'>" ${LOGIN_PAGE}
+# Ensure stylesheet hrefs point to the correct source (with cache-busting)
+sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${VERSION}'>" ${LOGIN_PAGE}
+sed -i "/<link data-tp='base' rel='stylesheet' href='/c <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css?v=${VERSION}'>" ${LOGIN_PAGE}
 
 # Adding/Removing javascript (use a stable data attribute marker)
 if [ ${ADD_JS} = "true" ]; then
   if grep -q "data-tp='themepark-js'" ${LOGIN_PAGE}; then
     echo "Updating Javascript"
-    sed -i "/<script .*data-tp='themepark-js'.*src='/c <script data-tp='themepark-js' type='text/javascript' src='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}'></script>" ${LOGIN_PAGE}
+    sed -i "/<script .*data-tp='themepark-js'.*src='/c <script data-tp='themepark-js' type='text/javascript' src='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}?v=${VERSION}'></script>" ${LOGIN_PAGE}
   else
     echo "Adding Javascript"
-    sed -i -e "\@</body>@i\    <script data-tp='themepark-js' type='text/javascript' src='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}'></script>" ${LOGIN_PAGE}
+    sed -i -e "\@</body>@i\    <script data-tp='themepark-js' type='text/javascript' src='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}?v=${VERSION}'></script>" ${LOGIN_PAGE}
   fi
 else
   if grep -q "data-tp='themepark-js'" ${LOGIN_PAGE}; then
@@ -77,6 +81,6 @@ fi
 # Finally, if the selected theme file changed, ensure it is reflected
 if ! grep -q ${TYPE}"/"${THEME} ${LOGIN_PAGE}; then
   echo "Ensuring selected stylesheet is active"
-  sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}'>" ${LOGIN_PAGE}
+  sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${VERSION}'>" ${LOGIN_PAGE}
   echo 'Stylesheet set to' ${THEME}
 fi
