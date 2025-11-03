@@ -1,8 +1,8 @@
-@import url("/css/addons/unraid/login-page/fallout/fallout-base.css");
+@import url(./fallout-base.css);
 :root {
-    --main-bg-color: url(/css/addons/unraid/login-page/fallout/wallpaper/rocky-wall.png),
-    url(/css/addons/unraid/login-page/fallout/wallpaper/terminal2.jpg) center center/cover no-repeat fixed;
-    --logo: url(/css/addons/unraid/login-page/fallout/logo/vault-tec_green.png) center no-repeat;
+    --main-bg-color: url(./wallpaper/rocky-wall.png),
+    url(./wallpaper/terminal2.jpg) center center/cover no-repeat fixed;
+    --logo: url(./logo/vault-tec_green.png) center no-repeat;
     --text-color: #14F074;
     --input-color: #14F074;
     --link-color: #14F074;

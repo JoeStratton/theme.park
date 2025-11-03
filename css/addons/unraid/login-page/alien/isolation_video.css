@@ -1,7 +1,7 @@
-@import url("/css/addons/unraid/login-page/alien/alien-base.css");
+@import url(./alien-base.css);
 :root {
     --main-bg: transparent;
-    --logo: url(/css/addons/unraid/login-page/alien/logo/wings_green.png) center no-repeat;
+    --logo: url(./logo/wings_green.png) center no-repeat;
     --text-color: #37f592;
     --input-color: #37f592;
     --link-color: #37f592;
