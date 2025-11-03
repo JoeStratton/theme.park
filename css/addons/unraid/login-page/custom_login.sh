@@ -79,32 +79,82 @@ sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' r
 sed -i "/<link data-tp='base' rel='stylesheet' href='/c <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css?v=${VERSION}'>" ${LOGIN_PAGE}
 
 # Build data URI for logo (fetch latest from GitHub raw)
-LOGO_DATA_URI="data:image/png;base64,$(curl -fsSL "${LOGO_SOURCE}" | base64 -w 0)"
-
-# Inject or update logo override so it always wins last in cascade
-if grep -q "data-tp='logo-override'" ${LOGIN_PAGE}; then
-  sed -i "/<style data-tp='logo-override'/c <style data-tp='logo-override'>:root { --logo: url('${LOGO_DATA_URI}') center no-repeat !important; }</style>" ${LOGIN_PAGE}
+echo "Fetching logo from ${LOGO_SOURCE}..."
+LOGO_TMP=$(mktemp)
+if curl -fsSL "${LOGO_SOURCE}" -o "${LOGO_TMP}" 2>&1; then
+  if [ -s "${LOGO_TMP}" ]; then
+    LOGO_DATA_URI="data:image/png;base64,$(base64 -w 0 < "${LOGO_TMP}" 2>/dev/null || base64 < "${LOGO_TMP}" | tr -d '\n')"
+    echo "Logo fetched successfully, size: $(stat -c%s "${LOGO_TMP}" 2>/dev/null || echo "unknown") bytes"
+  else
+    echo "WARNING: Logo file is empty, using external URL instead"
+    LOGO_DATA_URI="${LOGO_SOURCE}?v=${VERSION}"
+  fi
 else
-  sed -i -e "\\@</head>@i\    <style data-tp='logo-override'>:root { --logo: url('${LOGO_DATA_URI}') center no-repeat !important; }</style>" ${LOGIN_PAGE}
+  echo "WARNING: Failed to fetch logo (curl failed), using external URL instead"
+  LOGO_DATA_URI="${LOGO_SOURCE}?v=${VERSION}"
 fi
+rm -f "${LOGO_TMP}"
+
+# Remove any existing logo override block
+sed -i "/<style data-tp='logo-override'>/,/<\\/style>/d" ${LOGIN_PAGE}
+# Also remove old logo override without data-tp marker
+sed -i "/<style.*logo-override/,/<\\/style>/d" ${LOGIN_PAGE}
+
+# Insert style AFTER the theme link tag (so it comes later in cascade and overrides)
+# Use temp file + awk to avoid sed command line length issues with large data URIs
+TMP_STYLE=$(mktemp)
+printf "    <style data-tp='logo-override'>:root { --logo: url('%s') center no-repeat !important; }</style>\n" "${LOGO_DATA_URI}" > "${TMP_STYLE}"
+TMP_PAGE=$(mktemp)
+# Insert after the theme link tag using awk
+awk -v style_file="${TMP_STYLE}" 'FNR==NR{if(NR==1) {while((getline line < style_file) > 0) style_block=style_block line "\n"; close(style_file)} a[++n]=$0; next} /data-tp=.theme./{print; printf "%s", style_block; next} {print}' "${LOGIN_PAGE}" "${LOGIN_PAGE}" > "${TMP_PAGE}"
+if [ $? -eq 0 ] && [ -s "${TMP_PAGE}" ]; then
+  cp -p "${TMP_PAGE}" "${LOGIN_PAGE}"
+  echo "Logo override inserted after theme stylesheets"
+  # Verify it was inserted
+  if grep -q "data-tp='logo-override'" ${LOGIN_PAGE}; then
+    echo "Logo override verified in login page"
+  else
+    echo "ERROR: Logo override not found in login page after insertion"
+  fi
+else
+  echo "WARNING: Failed to insert logo override using awk"
+fi
+rm -f "${TMP_STYLE}" "${TMP_PAGE}"
 
 # Adding/Removing javascript (inline from GitHub raw using data URI)
 if [ ${ADD_JS} = "true" ]; then
   JS_SOURCE_URL="${RAW_BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}"
-  JS_DATA_URI="data:text/javascript;base64,$(curl -fsSL "${JS_SOURCE_URL}" | base64 -w 0)"
-  if grep -q "data-tp='themepark-js'" ${LOGIN_PAGE}; then
-    echo "Updating Javascript (inline)"
-    sed -i "/<script .*data-tp='themepark-js'.*src='/c <script data-tp='themepark-js' type='text/javascript' src='${JS_DATA_URI}'></script>" ${LOGIN_PAGE}
+  echo "Fetching JS from ${JS_SOURCE_URL}..."
+  JS_DATA=$(curl -fsSL "${JS_SOURCE_URL}" 2>/dev/null)
+  if [ -z "${JS_DATA}" ]; then
+    echo "WARNING: Failed to fetch JS, using external URL instead"
+    JS_DATA_URI="${JS_SOURCE_URL}?v=${VERSION}"
   else
-    echo "Adding Javascript (inline)"
-    sed -i -e "\\@</body>@i\    <script data-tp='themepark-js' type='text/javascript' src='${JS_DATA_URI}'></script>" ${LOGIN_PAGE}
+    JS_DATA_URI="data:text/javascript;base64,$(echo "${JS_DATA}" | base64 | tr -d '\n')"
+    echo "JS fetched successfully"
   fi
+  # Remove any existing themepark-js tag
+  sed -i "/<script .*data-tp='themepark-js'.*src='/d" ${LOGIN_PAGE}
+  # Insert script before </body> (FIXED: correct pattern)
+  TMP_JS=$(mktemp)
+  printf "    <script data-tp='themepark-js' type='text/javascript' src='%s'></script>\n" "${JS_DATA_URI}" > "${TMP_JS}"
+  TMP_PAGE2=$(mktemp)
+  awk 'FNR==NR{a[++n]=$0; next} /<\/body>/{for(i=1;i<=n;i++) print a[i]; print; next} {print}' "${TMP_JS}" "${LOGIN_PAGE}" > "${TMP_PAGE2}"
+  if [ $? -eq 0 ]; then
+    cp -p "${TMP_PAGE2}" "${LOGIN_PAGE}"
+    echo "JS script inserted"
+  else
+    echo "WARNING: Failed to insert JS script"
+  fi
+  rm -f "${TMP_JS}" "${TMP_PAGE2}"
 else
   if grep -q "data-tp='themepark-js'" ${LOGIN_PAGE}; then
     echo "Removing Javascript.."
     sed -i "/<script .*data-tp='themepark-js'.*src='/d" ${LOGIN_PAGE}
   fi
 fi
+
+rm -f "${TMP_STYLE}" "${TMP_PAGE}"
 
 # Finally, if the selected theme file changed, ensure it is reflected
 if ! grep -q ${TYPE}"/"${THEME} ${LOGIN_PAGE}; then
