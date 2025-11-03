@@ -1,6 +1,6 @@
 #!/bin/bash
 TYPE="retro-terminal"
-THEME="green.css"
+THEME="blue.css"
 
 # Source assets directly from GitHub via jsDelivr (serves proper CSS/JS content types)
 BASE_URL="https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master"
