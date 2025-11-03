@@ -9,7 +9,7 @@
 --main-bg-color:black;
 --body-before:none;
 --body-after: none;
---body-animation: flicker;
+--body-animation: none;
 --logo: url(/css/addons/unraid/login-page/alien/logo/wings_blue.png) center no-repeat;
 --text-color: #70d7f6;
 --input-color: #70d7f6;
@@ -23,7 +23,7 @@
 --selection-color: #8f2809;
 --custom-text-header:#70d7f6;
 --custom-text-header-shadow:#70d7f6;
---custom-text-header-animation: textflicker;
+--custom-text-header-animation: none;
 --input-font: 'Share Tech Mono', monospace;
 --text-font: 'Share Tech Mono', monospace;
 --loginbox-background-color: transparent;
