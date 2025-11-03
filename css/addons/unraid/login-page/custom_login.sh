@@ -5,6 +5,12 @@ THEME="blue.css"
 # Source assets directly from GitHub via jsDelivr (serves proper CSS/JS content types)
 BASE_URL="https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master"
 
+# Raw GitHub for inlining content (bypasses CDN cache)
+GITHUB_USER="JoeStratton"
+GITHUB_REPO="theme.park"
+GITHUB_BRANCH="master"
+RAW_BASE_URL="https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
+
 ADD_JS="true"
 JS="custom_text_header.js"
 DISABLE_THEME="false"
@@ -12,8 +18,8 @@ DISABLE_THEME="false"
 # Cache-busting version (override by exporting VERSION before running)
 VERSION="${VERSION:-$(date +%s)}"
 
-# Custom logo override (override by exporting LOGO_URL before running)
-LOGO_URL="${LOGO_URL:-https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master/images/unjoe_logo.png}"
+# Custom logo source (override by exporting LOGO_SOURCE before running)
+LOGO_SOURCE="${LOGO_SOURCE:-${RAW_BASE_URL}/images/unjoe_logo.png}"
 
 ## FAQ
 
@@ -26,11 +32,12 @@ echo -e "Variables set:\n\
 TYPE          = ${TYPE}\n\
 THEME         = ${THEME}\n\
 BASE_URL      = ${BASE_URL}\n\
+RAW_BASE_URL  = ${RAW_BASE_URL}\n\
 ADD_JS        = ${ADD_JS}\n\
 JS            = ${JS}\n\
 DISABLE_THEME = ${DISABLE_THEME}\n\
 VERSION       = ${VERSION}\n\
-LOGO_URL      = ${LOGO_URL}\n"
+LOGO_SOURCE   = ${LOGO_SOURCE}\n"
 
 echo "NOTE: Change the LOGIN_PAGE variable to /usr/local/emhttp/login.php if you are on a version older than 6.10"
 LOGIN_PAGE="/usr/local/emhttp/webGui/include/.login.php"
@@ -71,21 +78,26 @@ fi
 sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${VERSION}'>" ${LOGIN_PAGE}
 sed -i "/<link data-tp='base' rel='stylesheet' href='/c <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css?v=${VERSION}'>" ${LOGIN_PAGE}
 
+# Build data URI for logo (fetch latest from GitHub raw)
+LOGO_DATA_URI="data:image/png;base64,$(curl -fsSL "${LOGO_SOURCE}" | base64 -w 0)"
+
 # Inject or update logo override so it always wins last in cascade
 if grep -q "data-tp='logo-override'" ${LOGIN_PAGE}; then
-  sed -i "/<style data-tp='logo-override'/c <style data-tp='logo-override'>:root { --logo: url('${LOGO_URL}?v=${VERSION}') center no-repeat; }</style>" ${LOGIN_PAGE}
+  sed -i "/<style data-tp='logo-override'/c <style data-tp='logo-override'>:root { --logo: url('${LOGO_DATA_URI}') center no-repeat !important; }</style>" ${LOGIN_PAGE}
 else
-  sed -i -e "\\@</head>@i\    <style data-tp='logo-override'>:root { --logo: url('${LOGO_URL}?v=${VERSION}') center no-repeat; }</style>" ${LOGIN_PAGE}
+  sed -i -e "\\@</head>@i\    <style data-tp='logo-override'>:root { --logo: url('${LOGO_DATA_URI}') center no-repeat !important; }</style>" ${LOGIN_PAGE}
 fi
 
-# Adding/Removing javascript (use a stable data attribute marker)
+# Adding/Removing javascript (inline from GitHub raw using data URI)
 if [ ${ADD_JS} = "true" ]; then
+  JS_SOURCE_URL="${RAW_BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}"
+  JS_DATA_URI="data:text/javascript;base64,$(curl -fsSL "${JS_SOURCE_URL}" | base64 -w 0)"
   if grep -q "data-tp='themepark-js'" ${LOGIN_PAGE}; then
-    echo "Updating Javascript"
-    sed -i "/<script .*data-tp='themepark-js'.*src='/c <script data-tp='themepark-js' type='text/javascript' src='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}?v=${VERSION}'></script>" ${LOGIN_PAGE}
+    echo "Updating Javascript (inline)"
+    sed -i "/<script .*data-tp='themepark-js'.*src='/c <script data-tp='themepark-js' type='text/javascript' src='${JS_DATA_URI}'></script>" ${LOGIN_PAGE}
   else
-    echo "Adding Javascript"
-    sed -i -e "\\@</body>@i\    <script data-tp='themepark-js' type='text/javascript' src='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}?v=${VERSION}'></script>" ${LOGIN_PAGE}
+    echo "Adding Javascript (inline)"
+    sed -i -e "\\@</body>@i\    <script data-tp='themepark-js' type='text/javascript' src='${JS_DATA_URI}'></script>" ${LOGIN_PAGE}
   fi
 else
   if grep -q "data-tp='themepark-js'" ${LOGIN_PAGE}; then
