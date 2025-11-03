@@ -10,7 +10,7 @@
 --body-before:none;
 --body-after: none;
 --body-animation: flicker;
---logo: url(https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master/css/images/unjoe_logo.png) center no-repeat;
+  --logo: url(https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master/images/unjoe_logo.png) center no-repeat;
 --text-color: #70d7f6;
 --input-color: #70d7f6;
 --link-color: #70d7f6;
