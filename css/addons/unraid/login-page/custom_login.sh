@@ -111,10 +111,9 @@ if grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
   TMP_STYLE=$(mktemp)
   printf "    <style data-tp='logo-override'>\n" > "${TMP_STYLE}"
   printf ":root {\n" >> "${TMP_STYLE}"
+  printf "  --logo: url('%s') center no-repeat !important;\n" "${LOGO_DATA_URI}" >> "${TMP_STYLE}"
   printf "  --body-before: #70d7f61a !important;\n" >> "${TMP_STYLE}"
   printf "  --body-after: none !important;\n" >> "${TMP_STYLE}"
-  printf "  --body-animation: flicker !important;\n" >> "${TMP_STYLE}"
-  printf "  --custom-text-header-animation: textflicker !important;\n" >> "${TMP_STYLE}"
   printf "}\n" >> "${TMP_STYLE}"
   printf "#login .logo {\n" >> "${TMP_STYLE}"
   printf "    box-sizing: border-box !important;\n" >> "${TMP_STYLE}"
