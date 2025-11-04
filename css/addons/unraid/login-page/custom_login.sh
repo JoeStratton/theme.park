@@ -69,8 +69,10 @@ sed -i "/<script[^>]*css\\/addons\\/unraid\\/login-page[^>]*><\\/script>/d" ${LO
 # Add stylesheets if not present - insert after first existing <link> tag we find
 if ! grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
   echo "Adding stylesheet"
+  # Add random component to cache-busting to ensure fresh CSS loads
+  CSS_VERSION="${VERSION}-${RANDOM}"
   TMP_CSS=$(mktemp)
-  printf "    <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css?v=${VERSION}'>\n    <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${VERSION}'>\n" > "${TMP_CSS}"
+  printf "    <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css?v=${CSS_VERSION}'>\n    <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${CSS_VERSION}'>\n" > "${TMP_CSS}"
   TMP_PAGE_CSS=$(mktemp)
   # Insert after first <link> tag found
   if grep -q "<link" ${LOGIN_PAGE}; then
@@ -89,8 +91,10 @@ if ! grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
 fi
 
 # Ensure stylesheet hrefs point to the correct source (with cache-busting)
-sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${VERSION}'>" ${LOGIN_PAGE}
-sed -i "/<link data-tp='base' rel='stylesheet' href='/c <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css?v=${VERSION}'>" ${LOGIN_PAGE}
+# Add random component to cache-busting to ensure fresh CSS loads
+CSS_VERSION="${VERSION}-${RANDOM}"
+sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${CSS_VERSION}'>" ${LOGIN_PAGE}
+sed -i "/<link data-tp='base' rel='stylesheet' href='/c <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css?v=${CSS_VERSION}'>" ${LOGIN_PAGE}
 
 # Use external URL for logo (large files work better as URLs than data URIs)
 echo "Using logo URL: ${LOGO_SOURCE}"
@@ -187,6 +191,8 @@ fi
 # Finally, if the selected theme file changed, ensure it is reflected
 if ! grep -q ${TYPE}"/"${THEME} ${LOGIN_PAGE}; then
   echo "Ensuring selected stylesheet is active"
-  sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${VERSION}'>" ${LOGIN_PAGE}
+  # Use CSS_VERSION with random component for cache-busting
+  CSS_VERSION="${VERSION}-${RANDOM}"
+  sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${CSS_VERSION}'>" ${LOGIN_PAGE}
   echo 'Stylesheet set to' ${THEME}
 fi

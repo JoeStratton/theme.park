@@ -8,7 +8,7 @@
 :root {
 --main-bg-color:black;
 --body-before:#70d7f61a;
---body-after: #70d7f633;
+--body-after: none;
 --body-animation: flicker;
 --logo: url(https://cdn.jsdelivr.net/gh/JoeStratton/theme.park@master/images/unjoe_logo.png) center no-repeat;
 --text-color: #70d7f6;
