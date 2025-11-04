@@ -78,48 +78,53 @@ fi
 sed -i "/<link data-tp='theme' rel='stylesheet' href='/c <link data-tp='theme' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${THEME}?v=${VERSION}'>" ${LOGIN_PAGE}
 sed -i "/<link data-tp='base' rel='stylesheet' href='/c <link data-tp='base' rel='stylesheet' href='${BASE_URL}/css/addons/unraid/login-page/${TYPE}/${TYPE}-base.css?v=${VERSION}'>" ${LOGIN_PAGE}
 
-# Build data URI for logo (fetch latest from GitHub raw)
-echo "Fetching logo from ${LOGO_SOURCE}..."
-LOGO_TMP=$(mktemp)
-if curl -fsSL "${LOGO_SOURCE}" -o "${LOGO_TMP}" 2>&1; then
-  if [ -s "${LOGO_TMP}" ]; then
-    LOGO_DATA_URI="data:image/png;base64,$(base64 -w 0 < "${LOGO_TMP}" 2>/dev/null || base64 < "${LOGO_TMP}" | tr -d '\n')"
-    echo "Logo fetched successfully, size: $(stat -c%s "${LOGO_TMP}" 2>/dev/null || echo "unknown") bytes"
-  else
-    echo "WARNING: Logo file is empty, using external URL instead"
-    LOGO_DATA_URI="${LOGO_SOURCE}?v=${VERSION}"
-  fi
-else
-  echo "WARNING: Failed to fetch logo (curl failed), using external URL instead"
-  LOGO_DATA_URI="${LOGO_SOURCE}?v=${VERSION}"
-fi
-rm -f "${LOGO_TMP}"
+# Use external URL for logo (large files work better as URLs than data URIs)
+echo "Using logo URL: ${LOGO_SOURCE}"
+LOGO_DATA_URI="${LOGO_SOURCE}?v=${VERSION}"
 
 # Remove any existing logo override block
 sed -i "/<style data-tp='logo-override'>/,/<\\/style>/d" ${LOGIN_PAGE}
 # Also remove old logo override without data-tp marker
 sed -i "/<style.*logo-override/,/<\\/style>/d" ${LOGIN_PAGE}
 
-# Insert style AFTER the theme link tag (so it comes later in cascade and overrides)
-# Use temp file + awk to avoid sed command line length issues with large data URIs
-TMP_STYLE=$(mktemp)
-printf "    <style data-tp='logo-override'>:root { --logo: url('%s') center no-repeat !important; }</style>\n" "${LOGO_DATA_URI}" > "${TMP_STYLE}"
-TMP_PAGE=$(mktemp)
-# Insert after the theme link tag using awk
-awk -v style_file="${TMP_STYLE}" 'FNR==NR{if(NR==1) {while((getline line < style_file) > 0) style_block=style_block line "\n"; close(style_file)} a[++n]=$0; next} /data-tp=.theme./{print; printf "%s", style_block; next} {print}' "${LOGIN_PAGE}" "${LOGIN_PAGE}" > "${TMP_PAGE}"
-if [ $? -eq 0 ] && [ -s "${TMP_PAGE}" ]; then
-  cp -p "${TMP_PAGE}" "${LOGIN_PAGE}"
-  echo "Logo override inserted after theme stylesheets"
-  # Verify it was inserted
-  if grep -q "data-tp='logo-override'" ${LOGIN_PAGE}; then
-    echo "Logo override verified in login page"
+# Insert style right after the theme link tag (using same awk approach as JS insertion)
+# This ensures it comes after theme CSS in cascade order
+if grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
+  TMP_STYLE=$(mktemp)
+  printf "    <style data-tp='logo-override'>:root { --logo: url('%s') center no-repeat !important; }</style>\n" "${LOGO_DATA_URI}" > "${TMP_STYLE}"
+  TMP_PAGE=$(mktemp)
+  awk 'FNR==NR{a[++n]=$0; next} /data-tp=.theme./{print; for(i=1;i<=n;i++) print a[i]; next} {print}' "${TMP_STYLE}" "${LOGIN_PAGE}" > "${TMP_PAGE}"
+  if [ $? -eq 0 ] && [ -s "${TMP_PAGE}" ]; then
+    cp -p "${TMP_PAGE}" "${LOGIN_PAGE}"
+    if grep -q "data-tp='logo-override'" ${LOGIN_PAGE}; then
+      echo "Logo override inserted after theme stylesheet"
+    else
+      echo "WARNING: Logo override not found after insertion"
+    fi
   else
-    echo "ERROR: Logo override not found in login page after insertion"
+    echo "WARNING: Failed to insert logo override"
   fi
+  rm -f "${TMP_STYLE}" "${TMP_PAGE}"
+elif grep -q "</head>" ${LOGIN_PAGE}; then
+  # Fallback: insert before </head> if theme tag not found but </head> exists
+  TMP_STYLE=$(mktemp)
+  printf "    <style data-tp='logo-override'>:root { --logo: url('%s') center no-repeat !important; }</style>\n" "${LOGO_DATA_URI}" > "${TMP_STYLE}"
+  TMP_PAGE=$(mktemp)
+  awk 'FNR==NR{a[++n]=$0; next} /<\/head>/{for(i=1;i<=n;i++) print a[i]; print; next} {print}' "${TMP_STYLE}" "${LOGIN_PAGE}" > "${TMP_PAGE}"
+  if [ $? -eq 0 ] && [ -s "${TMP_PAGE}" ]; then
+    cp -p "${TMP_PAGE}" "${LOGIN_PAGE}"
+    if grep -q "data-tp='logo-override'" ${LOGIN_PAGE}; then
+      echo "Logo override inserted before </head>"
+    else
+      echo "WARNING: Logo override not found after insertion"
+    fi
+  else
+    echo "WARNING: Failed to insert logo override"
+  fi
+  rm -f "${TMP_STYLE}" "${TMP_PAGE}"
 else
-  echo "WARNING: Failed to insert logo override using awk"
+  echo "WARNING: Could not find insertion point for logo override"
 fi
-rm -f "${TMP_STYLE}" "${TMP_PAGE}"
 
 # Adding/Removing javascript (inline from GitHub raw using data URI)
 if [ ${ADD_JS} = "true" ]; then
