@@ -31,3 +31,11 @@
 --text-shadow-color: #70d7f6;
 --box-shadow: 0 0 15px;
 }
+
+/* Logo styling with rounded corners and subtle blur */
+#login .logo {
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(112, 215, 246, 0.3), 0 0 40px rgba(112, 215, 246, 0.15);
+    filter: blur(0.5px);
+    backdrop-filter: blur(4px);
+}
