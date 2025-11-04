@@ -105,31 +105,29 @@ sed -i "/<style.*logo-override/,/<\\/style>/d" ${LOGIN_PAGE}
 # This ensures it comes after theme CSS in cascade order
 if grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
   TMP_STYLE=$(mktemp)
-  printf "    <style data-tp='logo-override'>:root { --logo: url('%s') center no-repeat !important; }</style>\n" "${LOGO_DATA_URI}" > "${TMP_STYLE}"
+  cat > "${TMP_STYLE}" <<EOF
+    <style data-tp='logo-override'>
+:root { 
+  --logo: url('${LOGO_DATA_URI}') center no-repeat !important; 
+}
+#login .logo {
+    border: 3px dashed #70d7f6 !important;
+    border-radius: 12px !important;
+    box-shadow: 
+        0 0 10px rgba(112, 215, 246, 0.6),
+        0 0 20px rgba(112, 215, 246, 0.4),
+        0 0 30px rgba(112, 215, 246, 0.2),
+        inset 0 0 15px rgba(112, 215, 246, 0.1) !important;
+    padding: 0.5rem !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    filter: blur(0.5px) !important;
+    backdrop-filter: blur(4px) !important;
+}
+</style>
+EOF
   TMP_PAGE=$(mktemp)
-  # Match the theme link tag - look for line containing both data-tp='theme' and stylesheet
-  awk -v style_file="${TMP_STYLE}" '
-  BEGIN {
-    while((getline line < style_file) > 0) style_block=style_block line "\n"
-    close(style_file)
-    inserted=0
-  }
-  /data-tp=.theme./ && /stylesheet/ && !inserted {
-    print
-    printf "%s", style_block
-    inserted=1
-    next
-  }
-  {print}
-  END {
-    if (!inserted) {
-      print "ERROR: Failed to insert logo override" > "/dev/stderr"
-      exit 1
-    }
-  }
-  ' "${LOGIN_PAGE}" > "${TMP_PAGE}" 2>&1
-  AWK_EXIT=$?
-  if [ ${AWK_EXIT} -eq 0 ] && [ -s "${TMP_PAGE}" ]; then
+  awk 'FNR==NR{a[++n]=$0; next} /data-tp=.theme./{print; for(i=1;i<=n;i++) print a[i]; next} {print}' "${TMP_STYLE}" "${LOGIN_PAGE}" > "${TMP_PAGE}" 2>/dev/null
+  if [ $? -eq 0 ] && [ -s "${TMP_PAGE}" ]; then
     cp -p "${TMP_PAGE}" "${LOGIN_PAGE}"
     if grep -q "data-tp='logo-override'" ${LOGIN_PAGE}; then
       echo "Logo override inserted after theme stylesheet"
@@ -137,107 +135,43 @@ if grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
       echo "WARNING: Logo override not found after insertion"
     fi
   else
-    echo "WARNING: Failed to insert logo override (awk exit: ${AWK_EXIT})"
-    [ -s "${TMP_PAGE}" ] && head -5 "${TMP_PAGE}"
+    echo "WARNING: Failed to insert logo override"
   fi
   rm -f "${TMP_STYLE}" "${TMP_PAGE}"
 else
   echo "WARNING: Theme tag not found, skipping logo override (would break PHP to append)"
 fi
 
-# Adding/Removing javascript (use external URL via jsDelivr, not data URI to avoid size issues)
+# Adding/Removing javascript (use jsDelivr CDN for proper MIME types)
 if [ ${ADD_JS} = "true" ]; then
   JS_SOURCE_URL="${BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}?v=${VERSION}"
   echo "Using JS URL: ${JS_SOURCE_URL}"
   # Remove any existing themepark-js tag
   sed -i "/<script .*data-tp='themepark-js'.*src='/d" ${LOGIN_PAGE}
-  # Insert script after logo override, or after theme link, or after existing script tag
+  # Insert script after theme link or after existing script tag
   TMP_JS=$(mktemp)
-  printf "    <script data-tp='themepark-js' type='text/javascript' src='%s'></script>\n" "${JS_SOURCE_URL}" > "${TMP_JS}"
+  printf "    <script data-tp='themepark-js' type='text/javascript' src='%s' defer></script>\n" "${JS_SOURCE_URL}" > "${TMP_JS}"
   TMP_PAGE2=$(mktemp)
-  # Try to insert after logo override first, then theme link, then existing script
-  if grep -q "data-tp='logo-override'" ${LOGIN_PAGE}; then
-    # Insert after logo override style tag
-    awk -v js_file="${TMP_JS}" '
-    BEGIN {
-      while((getline line < js_file) > 0) js_block=js_block line "\n"
-      close(js_file)
-      inserted=0
-    }
-    /data-tp=.logo-override./ && !inserted {
-      print
-      printf "%s", js_block
-      inserted=1
-      next
-    }
-    {print}
-    END {
-      if (!inserted) {
-        print "ERROR: Failed to insert JS after logo override" > "/dev/stderr"
-        exit 1
-      }
-    }
-    ' "${LOGIN_PAGE}" > "${TMP_PAGE2}" 2>&1
-  elif grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
-    # Insert after theme link tag
-    awk -v js_file="${TMP_JS}" '
-    BEGIN {
-      while((getline line < js_file) > 0) js_block=js_block line "\n"
-      close(js_file)
-      inserted=0
-    }
-    /data-tp=.theme./ && /stylesheet/ && !inserted {
-      print
-      printf "%s", js_block
-      inserted=1
-      next
-    }
-    {print}
-    END {
-      if (!inserted) {
-        print "ERROR: Failed to insert JS after theme" > "/dev/stderr"
-        exit 1
-      }
-    }
-    ' "${LOGIN_PAGE}" > "${TMP_PAGE2}" 2>&1
+  # Try to insert after theme link first, then existing script
+  if grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
+    awk 'FNR==NR{a[++n]=$0; next} /data-tp=.theme./{print; for(i=1;i<=n;i++) print a[i]; next} {print}' "${TMP_JS}" "${LOGIN_PAGE}" > "${TMP_PAGE2}" 2>/dev/null
   elif grep -q "<script" ${LOGIN_PAGE}; then
-    # Insert after first script tag
-    awk -v js_file="${TMP_JS}" '
-    BEGIN {
-      while((getline line < js_file) > 0) js_block=js_block line "\n"
-      close(js_file)
-      inserted=0
-    }
-    /<script[^>]*>/ && !inserted {
-      print
-      printf "%s", js_block
-      inserted=1
-      next
-    }
-    {print}
-    END {
-      if (!inserted) {
-        print "ERROR: Failed to insert JS after script tag" > "/dev/stderr"
-        exit 1
-      }
-    }
-    ' "${LOGIN_PAGE}" > "${TMP_PAGE2}" 2>&1
+    awk 'FNR==NR{a[++n]=$0; next} /<script[^>]*>/{if(!inserted) {print; for(i=1;i<=n;i++) print a[i]; inserted=1; next}} {print}' "${TMP_JS}" "${LOGIN_PAGE}" > "${TMP_PAGE2}" 2>/dev/null
   else
-    # No script or theme tag found, skip (don't break PHP by appending)
     cp "${LOGIN_PAGE}" "${TMP_PAGE2}"
     echo "WARNING: Could not find insertion point for JS"
   fi
-  AWK_EXIT=$?
-  if [ ${AWK_EXIT} -eq 0 ] && [ -s "${TMP_PAGE2}" ]; then
+  if [ $? -eq 0 ] && [ -s "${TMP_PAGE2}" ]; then
     cp -p "${TMP_PAGE2}" "${LOGIN_PAGE}"
     if grep -q "data-tp='themepark-js'" ${LOGIN_PAGE}; then
       echo "JS script inserted"
+      # Debug: show the actual script tag line
+      grep "data-tp='themepark-js'" ${LOGIN_PAGE} | head -1
     else
       echo "WARNING: JS script not found after insertion"
     fi
   else
-    echo "WARNING: Failed to insert JS script (awk exit: ${AWK_EXIT})"
-    [ -s "${TMP_PAGE2}" ] && head -5 "${TMP_PAGE2}"
+    echo "WARNING: Failed to insert JS script"
   fi
   rm -f "${TMP_JS}" "${TMP_PAGE2}"
 else

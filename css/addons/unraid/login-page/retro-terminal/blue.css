@@ -31,18 +31,3 @@
 --text-shadow-color: #70d7f6;
 --box-shadow: 0 0 15px;
 }
-
-/* Logo styling with dotted blue border and blurred glow edges */
-#login .logo {
-    border: 3px dashed #70d7f6;
-    border-radius: 12px;
-    box-shadow: 
-        0 0 10px rgba(112, 215, 246, 0.6),
-        0 0 20px rgba(112, 215, 246, 0.4),
-        0 0 30px rgba(112, 215, 246, 0.2),
-        inset 0 0 15px rgba(112, 215, 246, 0.1);
-    padding: 0.5rem;
-    background: rgba(0, 0, 0, 0.3);
-    filter: blur(0.5px);
-    backdrop-filter: blur(4px);
-}
