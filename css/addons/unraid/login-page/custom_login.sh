@@ -105,26 +105,27 @@ sed -i "/<style.*logo-override/,/<\\/style>/d" ${LOGIN_PAGE}
 # This ensures it comes after theme CSS in cascade order
 if grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
   TMP_STYLE=$(mktemp)
-  cat > "${TMP_STYLE}" <<EOF
-    <style data-tp='logo-override'>
-:root { 
-  --logo: url('${LOGO_DATA_URI}') center no-repeat !important; 
-}
-#login .logo {
-    border: 3px dashed #70d7f6 !important;
-    border-radius: 12px !important;
-    box-shadow: 
-        0 0 10px rgba(112, 215, 246, 0.6),
-        0 0 20px rgba(112, 215, 246, 0.4),
-        0 0 30px rgba(112, 215, 246, 0.2),
-        inset 0 0 15px rgba(112, 215, 246, 0.1) !important;
-    padding: 0.5rem !important;
-    background: rgba(0, 0, 0, 0.3) !important;
-    filter: blur(0.5px) !important;
-    backdrop-filter: blur(4px) !important;
-}
-</style>
-EOF
+  printf "    <style data-tp='logo-override'>\n" > "${TMP_STYLE}"
+  printf ":root { --logo: url('%s') center no-repeat !important; }\n" "${LOGO_DATA_URI}" >> "${TMP_STYLE}"
+  printf "#login .logo {\n" >> "${TMP_STYLE}"
+  printf "    box-sizing: border-box !important;\n" >> "${TMP_STYLE}"
+  printf "    border: 3px dashed #70d7f6 !important;\n" >> "${TMP_STYLE}"
+  printf "    border-radius: 12px !important;\n" >> "${TMP_STYLE}"
+  printf "    box-shadow: 0 0 10px rgba(112, 215, 246, 0.6), 0 0 20px rgba(112, 215, 246, 0.4), 0 0 30px rgba(112, 215, 246, 0.2), inset 0 0 15px rgba(112, 215, 246, 0.1) !important;\n" >> "${TMP_STYLE}"
+  printf "    padding: 0.25rem !important;\n" >> "${TMP_STYLE}"
+  printf "    background-color: rgba(0, 0, 0, 0.3) !important;\n" >> "${TMP_STYLE}"
+  printf "    background-size: contain !important;\n" >> "${TMP_STYLE}"
+  printf "    width: 180px !important;\n" >> "${TMP_STYLE}"
+  printf "    height: 180px !important;\n" >> "${TMP_STYLE}"
+  printf "    filter: blur(0.5px) !important;\n" >> "${TMP_STYLE}"
+  printf "    backdrop-filter: blur(4px) !important;\n" >> "${TMP_STYLE}"
+  printf "    margin: 0 auto !important;\n" >> "${TMP_STYLE}"
+  printf "    display: block !important;\n" >> "${TMP_STYLE}"
+  printf "}\n" >> "${TMP_STYLE}"
+  printf "h1 {\n" >> "${TMP_STYLE}"
+  printf "    display: none !important;\n" >> "${TMP_STYLE}"
+  printf "}\n" >> "${TMP_STYLE}"
+  printf "</style>\n" >> "${TMP_STYLE}"
   TMP_PAGE=$(mktemp)
   awk 'FNR==NR{a[++n]=$0; next} /data-tp=.theme./{print; for(i=1;i<=n;i++) print a[i]; next} {print}' "${TMP_STYLE}" "${LOGIN_PAGE}" > "${TMP_PAGE}" 2>/dev/null
   if [ $? -eq 0 ] && [ -s "${TMP_PAGE}" ]; then
@@ -144,7 +145,9 @@ fi
 
 # Adding/Removing javascript (use jsDelivr CDN for proper MIME types)
 if [ ${ADD_JS} = "true" ]; then
-  JS_SOURCE_URL="${BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}?v=${VERSION}"
+  # Add random component to cache-busting to ensure fresh JS loads
+  JS_VERSION="${VERSION}-${RANDOM}"
+  JS_SOURCE_URL="${BASE_URL}/css/addons/unraid/login-page/${TYPE}/js/${JS}?v=${JS_VERSION}"
   echo "Using JS URL: ${JS_SOURCE_URL}"
   # Remove any existing themepark-js tag
   sed -i "/<script .*data-tp='themepark-js'.*src='/d" ${LOGIN_PAGE}
