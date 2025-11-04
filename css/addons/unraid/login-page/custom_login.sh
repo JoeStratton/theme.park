@@ -129,6 +129,9 @@ if grep -q "data-tp='theme'" ${LOGIN_PAGE}; then
   printf "h1 {\n" >> "${TMP_STYLE}"
   printf "    display: none !important;\n" >> "${TMP_STYLE}"
   printf "}\n" >> "${TMP_STYLE}"
+  printf ".custom-text-header {\n" >> "${TMP_STYLE}"
+  printf "    padding-bottom: 5em;\n" >> "${TMP_STYLE}"
+  printf "}\n" >> "${TMP_STYLE}"
   printf "</style>\n" >> "${TMP_STYLE}"
   TMP_PAGE=$(mktemp)
   awk 'FNR==NR{a[++n]=$0; next} /data-tp=.theme./{print; for(i=1;i<=n;i++) print a[i]; next} {print}' "${TMP_STYLE}" "${LOGIN_PAGE}" > "${TMP_PAGE}" 2>/dev/null
